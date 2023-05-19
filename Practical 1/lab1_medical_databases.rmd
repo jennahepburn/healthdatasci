@@ -1,3 +1,8 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -30,17 +35,60 @@ The data required is available via the [course website](https://github.com/magui
 
 **1** Use the data dictionary describe each of the variables/features in the CSV in your report.
 
+PatientID - Number for each patient that uniquely identifies them.
+
+AppointmentID - Number for each appointment that uniquely identifies it.
+
+Gender - Patient gender (Male or Female).
+
+ScheduledDate - Date that the patient scheduled the appointment.
+
+AppointmentDate - Date the appointment occurred.
+
+Age - Patient age at time of appointment.
+
+Neighbourhood - The neighbourhood/district of Vitória (capital city of Espírito Santo, Brazil) in which the appointment occurred.
+
+SocialWelfare - Binary indicator of whether the patient is a recipient of Bolsa Família welfare payments, which are welfare payments of the country of Brazil for people who fall below the poverty line.
+
+Hypertension - Binary indicator of whether the patient has been diagnosed with hypertension.
+
+Diabetes - Binary indicator of whether the patient has been diagnosed with diabetes.
+
+AlcoholUseDisorder - Binary indicator of whether the patient has been diagnosed with alcohol use disorder.
+
+Disability - Whether the patient previously diagnosed with a disability. 0 value if no disability and severity rating of 1-4 if the patient has a disability.
+
+SMSReceived - Binary indicator of whether a reminder text sent to the patient before appointment.
+
+NoShow - Indicator of whether the patient attended scheduled appointment (yes/no).
+
 **2** Can you think of 3 hypotheses for why someone may be more likely to miss a medical appointment?
 
+- Unable to get time off work to attend appointment as medical appointments typically happen during weekday working hours which may be a barrier for people to attend. 
+
+- Disability or chronic illness could make it difficult for patients to physically make it to appointments.
+
+- Transportation issues including not having a vehicle, not being able to afford public transit, or improper, unavailable, or unsafe public transit.
+
 **3** Can you provide 3 examples of important contextual information that is missing in this data dictionary and dataset that could impact your analyses e.g., what type of medical appointment does each `AppointmentID` refer to?  
+
+- More information on comorbidities such as chronic illnesses and diagnoses other than the 4 included (hypertension, diabetes, alcohol use disorder, and disability)
+
+- Access to a vehicle
+
+- Level of educational attainment or socioeconomic status
+
+- Hospitalizations
 
 ## Data Parsing and Cleaning
 
 **4** Modify the following to make it reproducible i.e., downloads the data file directly from version control
 
 ```{r parse}
-raw.data <- read_csv('lab1_data/2016_05v2_VitoriaAppointmentData.csv', col_types='fffTTifllllflf')
-#raw.data <- readr::read_csv('https://raw.githubusercontent.com/maguire-lab/health_data_science_research/ ... ')
+raw.data <- read_csv('2016_05v2_VitoriaAppointmentData.csv', col_types='fffTTifllllflf')
+
+raw.data <- readr::read_csv('https://raw.githubusercontent.com/jennahepburn/healthdatasci/main/Practical%201/2016_05v2_VitoriaAppointmentData.csv', col_types='fffTTifllllflf')
 ```
 
 Now we need to check data is valid: because we specified col_types and the data parsed without error most of our data seems to at least be formatted as we expect i.e., ages are integers
@@ -51,6 +99,8 @@ raw.data %>% filter(Age > 110)
 We can see there are 2 patient's older than 100 which seems suspicious but we can't actually say if this is impossible.
 
 **5** Are there any individuals with impossible ages? If so we can drop this row using `filter` i.e., `data <- data %>% filter(CRITERIA)`
+
+There are two individuals who are 115 years old. This is on the edge of being biologically plausible, as the oldest ever person lived to 122 years old. However, while this may seem unlikely, 115 is not old enough to be biologically impossible. Therefore, I will not drop these patients.
 
 ## Exploratory Data Analysis
 First, we should get an idea if the data meets our expectations, there are newborns in the data (`Age==0`) and we wouldn't expect any of these to be diagnosed with Diabetes, Alcohol Use Disorder, and Hypertension (although in theory it could be possible).  We can easily check this:
@@ -66,6 +116,15 @@ count(raw.data, Neighbourhood, sort = TRUE)
 ```
 **6** What is the maximum number of appointments from the same patient?
 
+```{r}
+
+count(raw.data, PatientID, sort = TRUE)
+
+raw.data %>% filter(PatientID == 822145925426128) %>% unique()
+
+```
+
+The max number of appointments booked by the same patient is 88. However, it appears he did not show up to most of the appointments. He attended 3 of the 88 booked appointments.
 
 Let's explore the correlation between variables:
 
@@ -131,9 +190,20 @@ In this case, we are particularly interested in relationships between `NoShow` a
 
 **7** Which parameters most strongly correlate with missing appointments (`NoShow`)?
 
+The variables that are most strongly correlated with missing appointments are SMSReceived and ScheduledDate.
+
 **8** Are there any other variables which strongly correlate with one another?
 
+No variables are overly highly correlated with each other, however, based on the heat map scale, we will consider correlations greater than or equal to $\pm 0.5$ as a strong correlation.
+
+- Appointment ID and patient ID
+- Appointment ID and appointment date
+- Appointment date and scheduled date
+- Age and hypertension
+
 **9** Do you see any issues with PatientID/AppointmentID being included in this plot? 
+
+Yes, I do not think patient ID and appointment ID should be included in this plot as they are dependent on each other and therefore expected to be correlated. Appointment IDs will only ever have 1 patient ID associated with it. Additionally, there is no useful information to be gained from these values as they are randomly generated and cannot give us any prediction power to determine something such as missing an appointment. 
 
 Let's look at some individual variables and their relationship with `NoShow`.
 
@@ -162,6 +232,8 @@ ggplot(raw.data) +
 
 **10** How could you be misled if you only plotted 1 of these 2 plots of attendance by age group?
 
+If I had only plotted the second plot, it may seem that there was a large number of individuals no-showing appointments. For example, there are only 2 individuals (5 appointments) for the 110-120 age group, but one of the individuals missed 3 of 4 appointments. These 3 of 5 missed appointments for this age group makes it look like a massive burden of no-showed appointments, but in reality the effect is fairly small since there are only 2 individuals represented in this age group. This is much better represented in the first plot, which demonstrates the size of the groups to better understand the effect size. Additionally, trends are more easily seen with the first plot, which shows the no-shows appear to decrease with age starting at age 40-50.
+
 The key takeaway from this is that  number of individuals > 90 are very few from plot 1 so probably are very small so unlikely to make much of an impact on the overall distributions. 
 However, other patterns do emerge such as 10-20 age group is nearly twice as likely to miss appointments as the 60-70 years old.
 
@@ -186,33 +258,31 @@ ggplot(raw.data) +
 
 **11** From this plot does it look like SMS reminders increase or decrease the chance of someone not attending an appointment? Why might the opposite actually be true (hint: think about biases)? 
 
+It appears that receiving an SMS reminder reduces the chances of attending an appointment. However, this may not be entirely accurate. Firstly, from the previous question, we can see that age groups under 40 are more likely to miss an appointment. This younger age group would also be more likely to have a cell phone to receive SMS reminders compared to older ages. Additionally, same day appointments or walk-in appointments would likely not send patients a reminder. If an appointment is booked same day or through walk-in, the patient would be less likely to miss the appointment, despite not receiving a reminder. These factors may bias the results we see with the graphs.
+
 **12** Create a similar plot which compares the the density of `NoShow` across the values of disability 
 
-```{r}
-#Insert plot
-```
-
-Now let's look at the neighbourhood data as location can correlate highly with many social determinants of health. 
-
-```{r, fig.align="center"}
-ggplot(raw.data) + 
-  geom_bar(aes(x=Neighbourhood, fill=NoShow)) + 
-  theme(axis.text.x = element_text(angle=45, hjust=1, size=5)) + 
-  ggtitle('Attendance by Neighbourhood')
-
+```{r,fig.align="center"}
 
 ggplot(raw.data) + 
-  geom_bar(aes(x=Neighbourhood, fill=NoShow), position='fill') + 
-  theme(axis.text.x = element_text(angle=45, hjust=1, size=5)) + 
-  ggtitle('Proportional Attendance by Neighbourhood')
+  geom_bar(aes(x=Disability, fill=NoShow), alpha=0.8) + 
+  ggtitle("Density of SMS received across Age and No Show")
+
+ggplot(raw.data) + 
+  geom_bar(aes(x=Disability, fill=NoShow), position='fill', alpha=0.8) + 
+  ggtitle("Density of SMS received across Age and No Show")
+  
 ```
 
 Most neighborhoods have similar proportions of no-show but some have much higher and lower rates.
 
 **13** Suggest a reason for differences in attendance rates across neighbourhoods.
 
+
+
 Now let's explore the relationship between gender and NoShow.
 ```{r, fig.align="center"}
+
 ggplot(raw.data) + 
   geom_bar(aes(x=Gender, fill=NoShow))
   ggtitle("Gender by attendance")
