@@ -1,14 +1,13 @@
 ---
 output:
   pdf_document: default
-  html_document: default
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-
 library(readr)          # Data Input
 library(tidymodels)     # Data Manipulation
+library(tidyverse)      # Data Manipulation
 library(lubridate)      # Data Manupulation
 library(dplyr)          # Data Manipulation
 library(reshape2)       # Data Manipulation
@@ -19,6 +18,9 @@ library(viridis)        # Data Visualization
 library(ggthemes)       # Data Visualization
 library(pROC)           # Metrics
 library(caret)          # Machine Learning
+library(ranger)         # Machine Learning
+library(e1071)          # Machine Learning
+library (randomForest)  # Machine Learning
 ```
 
 This practical is based on exploratory data analysis and prediction of a dataset derived from a municipal database of healthcare administrative data. This dataset is derived from Vitoria, the capital city of Espírito Santo, Brazil (population 1.8 million) and was freely shared under a creative commons license.
@@ -266,11 +268,11 @@ It appears that receiving an SMS reminder reduces the chances of attending an ap
 
 ggplot(raw.data) + 
   geom_bar(aes(x=Disability, fill=NoShow), alpha=0.8) + 
-  ggtitle("Density of SMS received across Age and No Show")
+  ggtitle("Density of No Show by Disability Status/Severity")
 
 ggplot(raw.data) + 
   geom_bar(aes(x=Disability, fill=NoShow), position='fill', alpha=0.8) + 
-  ggtitle("Density of SMS received across Age and No Show")
+  ggtitle("Density of No Show by Disability Status/Severity")
   
 ```
 
@@ -278,25 +280,32 @@ Most neighborhoods have similar proportions of no-show but some have much higher
 
 **13** Suggest a reason for differences in attendance rates across neighbourhoods.
 
-
+Differences in attendance by neighbourhood may be explained by differences in socioeconomic status by location. Often in research postal code or location can be used as a proxy for socioeconomic status, and this may be valid in this case as well. There may also be differences in distance to a medical clinic by neighbourhood that makes it more difficult to attend appointments due to increased transportation and time requirements. 
 
 Now let's explore the relationship between gender and NoShow.
 ```{r, fig.align="center"}
 
 ggplot(raw.data) + 
-  geom_bar(aes(x=Gender, fill=NoShow))
-  ggtitle("Gender by attendance")
+  geom_bar(aes(x=Gender, fill=NoShow)) +
+  ggtitle("Gender by Attendance")
 
 ggplot(raw.data) + 
-  geom_bar(aes(x=Gender, fill=NoShow), position='fill')
-  ggtitle("Gender by attendance")
+  geom_bar(aes(x=Gender, fill=NoShow), position='fill') +
+  ggtitle("Gender by Attendance")
 
 ```
 
 **14** Create a similar plot using `SocialWelfare`
 
 ```{r ,fig.align="center"}
-#Insert plot
+
+ggplot(raw.data) + 
+  geom_bar(aes(x=SocialWelfare, fill=NoShow)) +
+  ggtitle("Attendance by Social Welfare")
+
+ggplot(raw.data) + 
+  geom_bar(aes(x=SocialWelfare, fill=NoShow), position='fill') +
+  ggtitle("Attendance by Social Welfare")
 
 ```
 
@@ -334,6 +343,8 @@ ggplot(raw.data) +
 
 **15** Have a look at the values in lag variable, does anything seem odd?
 
+Yes, it seems odd that that a huge portion of the patients that showed up to their appointment had 0 days between making the appointment and attending the appointment. This makes me think that some of these visits were likely walk-in visits (which by nature have a 0% no-show rate), or same day booking which would likely have a reduced rate of no-shows compared to appointments booked ahead of time.
+
 ## Predictive Modeling
 
 Let's see how well we can predict NoShow from the data. 
@@ -343,7 +354,7 @@ We'll start by preparing the data, followed by splitting it into testing and tra
 
 ```{r}
 ### REMOVE SUBSAMPLING FOR FINAL MODEL
-data.prep <- raw.data %>% select(-AppointmentID, -PatientID) #%>% sample_n(10000)
+data.prep <- raw.data %>% select(-AppointmentID, -PatientID) %>% sample_n(10000)
 
 set.seed(42)
 data.split <- initial_split(data.prep, prop = 0.7)
@@ -359,6 +370,8 @@ fit.control <- trainControl(method="cv",number=3,
 ```
 
 **16** Based on the EDA, how well do you think this is going to work?
+
+Based on the issues and biases we identified in previous questions including effect of walk-in appointments, missing info that may be important, bias in SMS reminders, etc., it is likely that this model will also be biased and therefore not overly effective as a predictive tool. However, there are over 110,000 observations which is a large dataset to base this off of, which may work in favour of the model despite potential bias. 
 
 Now we can train our XGBoost model
 ```{r}
@@ -415,7 +428,18 @@ ggplot(results, aes(x=Feature, y=Importance,fill=Importance))+
 
 **17** Using the [caret package](https://topepo.github.io/caret/) fit and evaluate 1 other ML model on this data.
 
+```{r}
+d.tree <- train(NoShow ~ ., 
+                  data = train, 
+                  method = "rpart")
+
+d.tree
+
+```
+
 **18** Based on everything, do you think we can trust analyses based on this dataset? Explain your reasoning.
+
+Based on everything, I think this data has severe limitations that affect the usefulness and accuracy of our results. The fact that there are both walk-in and booked appointments in this dataset add a challenge for our models, as all predictors may not be applicable for both types of appointments (ex. SMS reminder). The models perform decently for the quality of the data, but I do not believe these analyses can be trusted at face value. It is important to interpret these models with caution, and clearly outline the limitations that we have discussed. 
 
 ## Credits
 
