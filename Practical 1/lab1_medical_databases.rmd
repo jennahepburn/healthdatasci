@@ -1,4 +1,7 @@
 ---
+title: Health Data Science Practical 1
+author: Jenna Hepburn
+date: May 28, 2023
 output:
   pdf_document: default
 ---
@@ -119,11 +122,9 @@ count(raw.data, Neighbourhood, sort = TRUE)
 **6** What is the maximum number of appointments from the same patient?
 
 ```{r}
-
 count(raw.data, PatientID, sort = TRUE)
 
 raw.data %>% filter(PatientID == 822145925426128) %>% unique()
-
 ```
 
 The max number of appointments booked by the same patient is 88. However, it appears he did not show up to most of the appointments. He attended 3 of the 88 booked appointments.
@@ -131,7 +132,6 @@ The max number of appointments booked by the same patient is 88. However, it app
 Let's explore the correlation between variables:
 
 ```{r}
-
 # let's define a plotting function
 corplot = function(df){
   
@@ -184,7 +184,6 @@ numeric.data = mutate_all(raw.data, function(x) as.numeric(x))
 
 # Plot Correlation Heatmap
 corplot(numeric.data)
-
 ```
 
 Correlation heatmaps are useful for identifying linear relationships between variables/features.
@@ -229,7 +228,6 @@ ggplot(raw.data) +
 ggplot(raw.data) + 
   geom_bar(aes(x=Age.Range, fill=NoShow), position='fill') + 
   ggtitle("Proportion of No Show across Age Ranges")
-
 ```
 
 **10** How could you be misled if you only plotted 1 of these 2 plots of attendance by age group?
@@ -265,7 +263,6 @@ It appears that receiving an SMS reminder reduces the chances of attending an ap
 **12** Create a similar plot which compares the the density of `NoShow` across the values of disability 
 
 ```{r,fig.align="center"}
-
 ggplot(raw.data) + 
   geom_bar(aes(x=Disability, fill=NoShow), alpha=0.8) + 
   ggtitle("Density of No Show by Disability Status/Severity")
@@ -273,7 +270,6 @@ ggplot(raw.data) +
 ggplot(raw.data) + 
   geom_bar(aes(x=Disability, fill=NoShow), position='fill', alpha=0.8) + 
   ggtitle("Density of No Show by Disability Status/Severity")
-  
 ```
 
 Most neighborhoods have similar proportions of no-show but some have much higher and lower rates.
@@ -284,7 +280,6 @@ Differences in attendance by neighbourhood may be explained by differences in so
 
 Now let's explore the relationship between gender and NoShow.
 ```{r, fig.align="center"}
-
 ggplot(raw.data) + 
   geom_bar(aes(x=Gender, fill=NoShow)) +
   ggtitle("Gender by Attendance")
@@ -292,13 +287,11 @@ ggplot(raw.data) +
 ggplot(raw.data) + 
   geom_bar(aes(x=Gender, fill=NoShow), position='fill') +
   ggtitle("Gender by Attendance")
-
 ```
 
 **14** Create a similar plot using `SocialWelfare`
 
 ```{r ,fig.align="center"}
-
 ggplot(raw.data) + 
   geom_bar(aes(x=SocialWelfare, fill=NoShow)) +
   ggtitle("Attendance by Social Welfare")
@@ -306,7 +299,6 @@ ggplot(raw.data) +
 ggplot(raw.data) + 
   geom_bar(aes(x=SocialWelfare, fill=NoShow), position='fill') +
   ggtitle("Attendance by Social Welfare")
-
 ```
 
 Far more exploration could still be done, including dimensionality reduction approaches but although we have found some patterns there is no major/striking patterns on the data as it currently stands.
@@ -328,7 +320,6 @@ ggplot(raw.data) +
 ggplot(raw.data) +
   geom_bar(aes(x=AppointmentDay, fill=NoShow), position = 'fill') +
   ggtitle("Amount of No Show across Appointment Day") 
-
 ```
 Let's begin by creating a variable called `Lag`, which is the difference between when an appointment was scheduled and the actual appointment.
 
@@ -353,8 +344,7 @@ We'll start by preparing the data, followed by splitting it into testing and tra
 
 
 ```{r}
-### REMOVE SUBSAMPLING FOR FINAL MODEL
-data.prep <- raw.data %>% select(-AppointmentID, -PatientID) %>% sample_n(10000)
+data.prep <- raw.data %>% select(-AppointmentID, -PatientID)
 
 set.seed(42)
 data.split <- initial_split(data.prep, prop = 0.7)
@@ -429,17 +419,22 @@ ggplot(results, aes(x=Feature, y=Importance,fill=Importance))+
 **17** Using the [caret package](https://topepo.github.io/caret/) fit and evaluate 1 other ML model on this data.
 
 ```{r}
-d.tree <- train(NoShow ~ ., 
-                  data = train, 
-                  method = "rpart")
+train.ctl <- trainControl(
+  method = "repeatedcv",
+  number = 10,
+  repeats = 10)
+
+d.tree <- train(NoShow ~ .,
+                data = train,
+                method = "rpart",
+                trControl = train.ctl)
 
 d.tree
-
 ```
 
 **18** Based on everything, do you think we can trust analyses based on this dataset? Explain your reasoning.
 
-Based on everything, I think this data has severe limitations that affect the usefulness and accuracy of our results. The fact that there are both walk-in and booked appointments in this dataset add a challenge for our models, as all predictors may not be applicable for both types of appointments (ex. SMS reminder). The models perform decently for the quality of the data, but I do not believe these analyses can be trusted at face value. It is important to interpret these models with caution, and clearly outline the limitations that we have discussed. 
+Based on everything, I think this data has severe limitations that affect the usefulness and accuracy of our results. The fact that there are both walk-in and booked appointments in this dataset add a challenge for our models, as all predictors may not be applicable for both types of appointments (ex. SMS reminder). The models perform decently given the quality of the data, but I do not believe these analyses can be trusted at face value. It is important to interpret these models with caution, and clearly outline the limitations that we have discussed. 
 
 ## Credits
 
