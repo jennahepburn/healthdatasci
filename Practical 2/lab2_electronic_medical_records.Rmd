@@ -1,3 +1,10 @@
+---
+title: Health Data Science Practical 2
+author: Jenna Hepburn
+date: June 4, 2023
+output:
+  pdf_document: default
+---
 ```{r setup}
 knitr::opts_chunk$set(echo = TRUE)
 library(readr)
@@ -11,7 +18,6 @@ library(clinspacy)
 library(topicmodels)
 library('reshape2')
 library(stringr)
-
 ```
 
 This practical is based on exploratory data analysis, named entity recognition, and topic modelling of unstructured medical note free-text data derived from electronic medical records (EMR).  Real EMR data is very difficult to access without a specific need/request so this data set is derived from [medical transcription](https://mtsamples.com/) data instead.  I'll also caveat that the options of natural language processing (NLP) in R are far inferior to those available in Python. 
@@ -47,12 +53,10 @@ keywords - terms to explain the patient's condition including synonyms for their
 
 Let's see how many different medical specialties are featured in these notes: 
 ```{r}
-
 raw.data %>% dplyr::select(medical_specialty) %>% dplyr::n_distinct()
 ```
 
 So, how many transcripts are there from each specialty:
-
 
 ```{r}
 ggplot2::ggplot(raw.data, ggplot2::aes(y=medical_specialty)) + ggplot2::geom_bar() + labs(x="Document Count", y="Medical Speciality")
@@ -71,7 +75,6 @@ We are going to use the `tidytext` package to tokenise the transcript free-text.
 Let's remove stop words first. e.g., "the", "of", "to", and so forth.  These are known as stop words and we can remove them relative easily using a list from  `tidytext::stop_words` and `dplyr::anti_join()`
 
 ```{r}
-
 analysis.data <- filtered.data %>%
   unnest_tokens(word, transcription) %>%
   mutate(word = str_replace_all(word, "[^[:alnum:]]", "")) %>%
@@ -81,7 +84,6 @@ analysis.data <- filtered.data %>%
   summarise(transcription = paste(word, collapse = " ")) %>%
   left_join(select(filtered.data, -transcription), by = "note_id")
 ```
-
 
 Now let's tokenize the `transcription` to words (unigram) 
 By default this tokenises to words but other options include characters, n-grams, sentences, lines, paragraphs, or separation around a regular expression.
@@ -95,12 +97,10 @@ You can also do bi-grams
 tokenized.data <- analysis.data %>% tidytext::unnest_tokens(ngram, transcription, token = "ngrams", n=2, to_lower = TRUE)
 ```
 
-
 **2** How many unique tokens are there in the transcripts from each specialty:
 
 ```{r}
 tokenized.data.unigram %>% dplyr::group_by(medical_specialty) %>% dplyr::distinct(word) %>% dplyr::summarise(n=dplyr::n())
-
 ```
 
 Orthopedic - 7,682
@@ -201,7 +201,7 @@ Annoyingly, `tidytext` doesn't have a built-in lemmatizer.
 
 **5** Do you think a general purpose lemmatizer will work well for medical data? Why not?
 
-No, I do not think the general purpose of a lemmatizer will work well for medical data. This is because things can mean very different things in medicine, but sound the same. For example, hypertension and hypotension sound very similar, but are complete opposites in reality, making the distinction very important. Also, the context of what part of the body something is happening in is very important. For example, a blood clot in the brain is a stroke, and a blood clot in the heart is a heart attack. While these are both blood clots, they have completely different effects and outcomes, and require different specialists. Therefore these should not be grouped together for clinical purposes, despite being similar.
+No, I do not think the general purpose of a lemmatizer will work well for medical data. This is because words can mean very different things in medicine, but sound the same. For example, hypertension and hypotension sound very similar, but are complete opposites in reality, making the distinction very important. Also, the context of what part of the body something is happening in is very important. For example, a blood clot in the brain is a stroke, and a blood clot in the heart is a heart attack. While these are both blood clots, they have completely different effects and outcomes, and require different specialists. Therefore the general purpose of lematization may not work well for medical data.
 
 Unfortunately, a specialised lemmatizer like in `clinspacy` is going to be very painful to install so we will just use a simple lemmatizer for now:
 
@@ -292,7 +292,7 @@ all.counts.tfidf %>% dplyr::group_by(medical_specialty) %>% dplyr::slice_max(ord
 ```
 **8** Are there any lemmas that stand out in these lists? Why?
 
-"range motion" and "left ventricular" lemmas have the highest term frequency. We also see for surgery that there are 2 lemmas that mean the same thing, "anesthesia endotracheal" and "endotracheal anesthesia". If they had been grouped together, this may have resulted in higher values. Finally, "steri strips" shows up in both orthopedic and surgery. 
+"range motion" and "left ventricular" lemmas have the highest term frequency. We also see for surgery that there are 2 lemmas that mean the same thing, "anesthesia endotracheal" and "endotracheal anesthesia". If they had been grouped together, this may have resulted in higher (and more accurate) values. Finally, "steri strips" shows up in both orthopedic and surgery specialties. 
 
 We can look at transcriptions using these unusual lemmas to check how they are used with `stringr::str_detect`
 ```{r}
@@ -305,16 +305,13 @@ analysis.data %>% dplyr::select(medical_specialty, transcription) %>% dplyr::fil
 analysis.data %>% dplyr::select(medical_specialty, transcription) %>% dplyr::filter(stringr::str_detect(transcription, 'b.i.d')) %>% dplyr::slice(3)
 ```
 
-
 ## Topic Modelling
 
 In NLP, we often have collections of documents (in our case EMR transcriptions) that we’d like to divide into groups so that we can understand them separately. Topic modeling is a method for unsupervised classification of such documents, similar to clustering on numeric data.
 
 Latent Dirichlet allocation (LDA) is a particularly popular method for fitting a topic model. It treats each document as a mixture of topics, and each topic as a mixture of words. This allows documents to “overlap” each other in terms of content, rather than being separated into discrete groups, in a way that mirrors typical use of natural language.
 
-
 - Every document is a mixture of topics. We imagine that each document may contain words from several topics in particular proportions. For example, in a two-topic model we could say “Document 1 is 90% topic A and 10% topic B, while Document 2 is 30% topic A and 70% topic B.”
-
 
 - Every topic is a mixture of words. For example, we could imagine a two-topic model of American news, with one topic for “politics” and one for “entertainment.” The most common words in the politics topic might be “President”, “Congress”, and “government”, while the entertainment topic may be made up of words such as “movies”, “television”, and “actor”. Importantly, words can be shared between topics; a word like “budget” might appear in both equally.
 
@@ -356,8 +353,6 @@ top.terms %>%
     tidytext::scale_y_reordered()
 ```
 
-
-
 Now we can ask how well do these assigned topics match up to the medical specialties from which each of these transcripts was derived.
 
 ```{r}
@@ -373,7 +368,6 @@ specialty_gamma <- dplyr::left_join(specialty_gamma, note_id_specialty_mapping)
 ```
 
 ```{r}
-
 specialty_gamma %>%
   dplyr::mutate(medical_specialty = reorder(medical_specialty, gamma * topic)) %>%
   ggplot2::ggplot(ggplot2::aes(factor(topic), gamma)) +
@@ -405,14 +399,15 @@ top.terms <- emr.topics %>% dplyr::group_by(topic) %>%
   dplyr::ungroup() %>%
   dplyr::arrange(topic, -beta)
 
-
 top.terms %>% 
   dplyr::mutate(term=tidytext::reorder_within(term, beta, topic)) %>% 
   ggplot2::ggplot(ggplot2::aes(beta, term, fill=factor(topic))) + 
     ggplot2::geom_col(show.legend=FALSE) + 
     ggplot2::facet_wrap(~ topic, scales='free')  +
     tidytext::scale_y_reordered()
+```
 
+```{r}
 specialty_gamma <- tidytext::tidy(emr.lda, matrix='gamma')
 
 # we need to join in the specialty from the note_id
@@ -422,7 +417,9 @@ note_id_specialty_mapping <- lemmatized.data %>%
   dplyr::distinct()
 
 specialty_gamma <- dplyr::left_join(specialty_gamma, note_id_specialty_mapping)
+```
 
+```{r}
 specialty_gamma %>%
   dplyr::mutate(medical_specialty = reorder(medical_specialty, gamma * topic)) %>%
   ggplot2::ggplot(ggplot2::aes(factor(topic), gamma)) +
@@ -431,7 +428,9 @@ specialty_gamma %>%
   ggplot2::labs(x = "topic", y = expression(gamma))
 ```
 
+The top terms from the 5 top LDA still turned up in the 6 topic LDA. There were some minor differences, however, it appears that most all top terms were included in both. For example, carpal ligament, transverse carpal, and nerve root were included in LDA 5 and did not appear in LDA 6.
 
+The specialties are split into sub-topics in a similar way as in the last LDA. Surgery is less diverse in topics of transcriptions, which makes sense as it is a specialized field, and therefore more likely to stick to similar topics. Radiology appears to be the most diverse, as there are many reasons/diagnoses that someone may receive radiological imaging, and for many parts of the body. Orthopedic also has a fair bit of diversity, but not as much as radiology.
 
 ## Credits
 
