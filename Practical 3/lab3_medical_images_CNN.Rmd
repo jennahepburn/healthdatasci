@@ -23,23 +23,23 @@ Here is an example code snippet to install the required packages:
 you can uncomment the following code to install required packages
 ```{r}
 # Install necessary packages
-#install.packages("gridExtra")
-#install.packages("jpeg")
-#install.packages("imager")
-#install.packages("magick")
+install.packages("gridExtra")
+install.packages("jpeg")
+install.packages("imager")
+install.packages("magick")
 
 # Install Bioconductor package (if not already installed)
-#if (!require("BiocManager", quietly = TRUE))
-#    install.packages("BiocManager")
+if (!require("BiocManager", quietly = TRUE))
+install.packages("BiocManager")
 
 # Install EBImage package from Bioconductor
-#BiocManager::install("EBImage")
-#install.packages("abind")
+BiocManager::install("EBImage")
+install.packages("abind")
 
 # Install torch, torchvision, and luz
-#install.packages("torch")
-#install.packages("torchvision")
-#install.packages("luz")
+install.packages("torch")
+install.packages("torchvision")
+install.packages("luz")
 ```
 
 ```{r}
@@ -99,6 +99,7 @@ In the output above, you can see the filenames for all the chest X-rays. Look ca
 
 **1_** Do these filenames tell you anything about pneumonia? Why might this make predicting pneumonia more challenging?
 
+The file names tell me that pneumonia can have various causes including virus and bacteria. This makes predicting it more challenging as different causes and other predictors must be considered, which may differ from person to person. This lack of consistency may impact the accuracy of our predictions.
 
 The dataset folder is assumed to contain three subfolders: train, test, and validate. Each of these subfolders further contains two folders representing the two classes or labels in our classification task: "normal" and "pneumonia".
 The code provides a way to explore the dataset directory structure and obtain information about the number of images and their distribution across different classes. This information can be helpful in understanding the dataset and planning the subsequent steps of the image classification task.
@@ -206,7 +207,9 @@ for (i in 1:4) {
 grid.arrange(grobs = plots, nrow = 2, ncol = 2)
 ```
 
-**2_** From looking at only 3 images do you see any attribute of the images that we may have to normalise before training a model?
+**2_** From looking at only 3 images do you see any attribute of the images that we may have to normalize before training a model?
+
+We should normalize the size of the images before training a model.
 
 # Data Pre-processing
 
@@ -339,7 +342,9 @@ grid.arrange(fig, nrow = 1)
 As you can see, the provided dataset is completely balanced in all sets.
 **3_** if the dataset was not balanced, what kind of techniques could be useful?
 
-# Trainig
+If the dataset was not balanced, we could use undersampling to remove samples from the over-represented group. 
+
+# Training
 
 In the next step, we need to reshape the dataset to ensure it is in the appropriate format for feeding into deep learning models. Reshaping involves modifying the structure and dimensions of the data to match the expected input shape of the model. 
 
@@ -434,7 +439,7 @@ batch = train_dataloader$.iter()$.next()
 # Visualize the first batch size
 batch[[1]]$size()
 ```
-## creat the CNN model
+## create the CNN model
 
 The input image has one channel and a size of 224 x 224 pixels. The first convolutional layer has 32 filters with a kernel size of 3 x 3 and a stride of 1. The output of this layer has a size of 32 x 222 x 222. The second convolutional layer has 64 filters with the same kernel size and stride. The output of this layer has a size of 64 x 220 x 220. The max pooling layer has a kernel size of 2 x 2 and reduces the spatial dimensions by half. The output of this layer has a size of 64 x 110 x 110. The dropout layer randomly sets some elements to zero with a probability of 0.25. The flatten layer reshapes the output into a vector with a length of 774400. The first fully connected layer has 128 neurons and applies a ReLU activation function. The second dropout layer randomly sets some elements to zero with a probability of 0.5. The second fully connected layer has 2 neurons and produces the final output for the classification task.
 
@@ -564,9 +569,13 @@ print(acc_plot)
 
 **4_** Based on the training and test accuracy, is this model actually managing to classify X-rays into pneumonia vs normal? What do you think contributes to this? why?
 
+Based on the training and test accuracy, I do not think this model is adequately classifying pneumonia. With accuracy maxing out around 0.5, this is not effective enough to be used in any kind of clinical setting. I think that the high degree of variance in the presentation and causes of pneumonia contributes to this. Compared to something more defined, the variation in presentation of pneumonia on xray makes it difficult to predict.
+
 It seems that the model is not training effectively the model is struggling to learn from the data and is not generalizing well to unseen examples. It suggests that the model may be too complex or the training process needs adjustments.
 
 **5_** what is your suggestions to solve this problem? How could we improve this model?
+
+My suggestion to solve this problem would be to break pneumonia cases up by cause into two groups, bacterial and viral. Making two more similar groups would hopefully result in less variation among cases, and therefore higher accuracy in prediction.
 
 # Data Augmentation
 Data augmentation is one of the solutions to consider when facing training difficulties. Data augmentation involves applying various transformations or modifications to the existing training data, effectively expanding the dataset and introducing additional variations. This technique can help improve model performance and generalization by providing the model with more diverse examples to learn from.
@@ -589,7 +598,7 @@ T_img <- torch_squeeze(torch_tensor(img)) %>%
 image(as.array(T_img))
 ```
 
-We can also add the data transofmrations to our dataloader:
+We can also add the data transformations to our dataloader:
 
 ```{r}
 # Define a custom dataset class with transformations
@@ -643,6 +652,8 @@ batch[[1]]$size()
 
 **6_** What are the potential drawbacks or disadvantages of data augmentation?
 
+A potential drawback to data augmentation is that it may reduce the quality of images. I wonder if adding additional noise to the images would impact accuracy.
+
 # Mobile net
 
 Transfer learning is another technique in machine learning where knowledge gained from solving one problem is applied to a different but related problem. It involves leveraging pre-trained models that have been trained on large-scale datasets and have learned general features. By utilizing transfer learning, models can benefit from the knowledge and representations learned from these pre-trained models.
@@ -651,10 +662,14 @@ Torchvison provides versions of all the integrated architectures that have alrea
 
 **7_** What is ImageNet aka “ImageNet Large Scale Visual Recognition Challenge 2012”? How many images and classes does it involve? Why might this help us?
 
+The ImageNet challenge aims to estimate the content of photographs for the purpose of retrieval and automatic annotation. They use a subset of the large, hand-labeled, ImageNet dataset as training. This includes 10,000,000 labeled images depicting 10,000+ object categories.
+
 MobileNet is a pre-trained model that can be effectively utilized in transfer learning scenarios. Do some research about this model.
 
 **8_** Why do you think using this architecture in this practical assignment can help to improve the results? 
 Hint: See MobileNet publication
+
+MobileNet is a class of convolutional neural network (CNN) that uses depthwise separable convolutions to reduce the number of parameters compared. This makes it much faster than other models that we have utilized.
 
 **9_** How many parameters does this network have? How does this compare to better performing networks available in torch?
 
