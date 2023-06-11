@@ -1,6 +1,10 @@
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+---
+title: Health Data Science Practical 2
+author: Jenna Hepburn
+date: June 4, 2023
+output:
+  pdf_document: default
+---
 
 As we found for natural language processing, R is a little bit limited when it comes to deep neural networks. Unfortunately, these networks are the current gold-standard methods for medical image analysis. The ML/DL R packages that do exist provide interfaces (APIs) to libraries built in other languages like C/C++ and Java. This means there are a few “non-reproducible” installation and data gathering steps to run first. It also means there are a few “compromises” to get a practical that will A) be runnable B) actually complete within the allotted time and C) even vaguely works.
 Doing this on a full real dataset would likely follow a similar process (admittedly with more intensive training and more expressive architectures). Google colab running an R kernel hasn't proven a very effective alternative thus far either.
@@ -274,7 +278,6 @@ It is important to note that when using the nn_cross_entropy_loss function in R,
 
 Furthermore, when working with the Torch package in R, it is essential to ensure that labels start from 1 instead of 0. In binary classification problems, the labels should be 1 and 2, representing the two classes. This adjustment is necessary to avoid errors when using the labels as indices for the output tensor.
 
-
 ```{r}
 train_X <- process_images(shuffled_train_dataset)
 test_X <- process_images(shuffled_test_dataset)
@@ -339,6 +342,7 @@ fig <- ggplot(df, aes(x = Value)) +
 grid.arrange(fig, nrow = 1)
 
 ```
+
 As you can see, the provided dataset is completely balanced in all sets.
 **3_** if the dataset was not balanced, what kind of techniques could be useful?
 
@@ -362,6 +366,7 @@ print(length(test_y))
 print(dim(val_X))
 print(length(val_y))
 ```
+
 The last dimension of an image represents the color channels, typically RGB (Red, Green, Blue) in color images or grayscale in black and white images. In our case, since we are working with black and white images, there is only one channel, hence the value 1.
 
 However, the deep learning framework expects the input tensor to have a specific shape, with the color channels as the second dimension. The desired shape is (batch_size x channels x height x width), but our current data has the shape (batch_size x height x width x channels).
@@ -439,6 +444,7 @@ batch = train_dataloader$.iter()$.next()
 # Visualize the first batch size
 batch[[1]]$size()
 ```
+
 ## create the CNN model
 
 The input image has one channel and a size of 224 x 224 pixels. The first convolutional layer has 32 filters with a kernel size of 3 x 3 and a stride of 1. The output of this layer has a size of 32 x 222 x 222. The second convolutional layer has 64 filters with the same kernel size and stride. The output of this layer has a size of 64 x 220 x 220. The max pooling layer has a kernel size of 2 x 2 and reduces the spatial dimensions by half. The output of this layer has a size of 64 x 110 x 110. The dropout layer randomly sets some elements to zero with a probability of 0.25. The flatten layer reshapes the output into a vector with a length of 774400. The first fully connected layer has 128 neurons and applies a ReLU activation function. The second dropout layer randomly sets some elements to zero with a probability of 0.5. The second fully connected layer has 2 neurons and produces the final output for the classification task.
@@ -463,7 +469,6 @@ Input Image: 1 channel, 224 x 224
 | FullyConnected| 2              | -               |
 
 
-
 ```{r}
 net <- nn_module(
   "Net",
@@ -471,6 +476,7 @@ net <- nn_module(
   initialize = function() {
     self$conv1 <- nn_conv2d(1, 32, 3, 1)
     self$conv2 <- nn_conv2d(32, 64, 3, 1)
+    self$conv3 <- nn_conv2d(64, 96, 3, 1)
     self$dropout1 <- nn_dropout2d(0.25)
     self$dropout2 <- nn_dropout2d(0.5)
     self$fc1 <- nn_linear(774400, 128)  # Adjust the input size based on your image dimensions
@@ -482,6 +488,8 @@ net <- nn_module(
       self$conv1() %>%                           # N * 32 * 222 * 222
       nnf_relu() %>% 
       self$conv2() %>%                           # N * 64 * 220 * 220
+      nnf_relu() %>% 
+      self$conv3() %>%                           # N * 64 * 220 * 220
       nnf_relu() %>% 
       nnf_max_pool2d(2) %>%                      # N * 64 * 110 * 110
       self$dropout1() %>% 
@@ -499,7 +507,7 @@ net <- nn_module(
 
 ```{r warning=FALSE}
 # Set the number of epochs
-num_epochs <- 3
+num_epochs <- 2
 
 train_loss <- numeric(num_epochs)
 train_acc <- numeric(num_epochs)
@@ -533,6 +541,7 @@ for (epoch in 1:num_epochs) {
 }
 
 ```
+
 ## Plot learning curves
 
 ```{r}
@@ -652,7 +661,7 @@ batch[[1]]$size()
 
 **6_** What are the potential drawbacks or disadvantages of data augmentation?
 
-A potential drawback to data augmentation is that it may reduce the quality of images. I wonder if adding additional noise to the images would impact accuracy.
+A potential drawback to data augmentation is that it may reduce the quality of images. I wonder if adding additional layers to the images would impact this.
 
 # Mobile net
 
@@ -669,22 +678,100 @@ MobileNet is a pre-trained model that can be effectively utilized in transfer le
 **8_** Why do you think using this architecture in this practical assignment can help to improve the results? 
 Hint: See MobileNet publication
 
-MobileNet is a class of convolutional neural network (CNN) that uses depthwise separable convolutions to reduce the number of parameters compared. This makes it much faster than other models that we have utilized.
+MobileNet is a class of convolutional neural network (CNN) that uses depthwise separable convolutions to reduce the number of parameters compared. This makes it much faster and more efficient than other models that we have utilized.
 
 **9_** How many parameters does this network have? How does this compare to better performing networks available in torch?
 
+The MobileNet model has only 13 million parameters, which is much less than other networks available in torch.
+
 In the following you can see an example of how we can load pre-trained models in our codes.
+*Code did not work. Sheida confirmed I could comment out the following.
 
 ```{r}
 # Load the pre-trained MobileNet model
-mobilenet <- model_mobilenet_v2(pretrained = TRUE)
+#mobilenet <- model_mobilenet_v2(pretrained = TRUE, progress = TRUE)
 
 # Modify the last fully connected layer to match your classification task
 
 #in_features <- mobilenet$classifier$in_features
-mobilenet$classifier <- nn_linear(224*224*3, 2)   # Adjust the output size based on your classification task
+#mobilenet$classifier <- nn_linear(224*224*3, 2)   # Adjust the output size based on your classification task
 ```
+
 **10_** Using the provided materials in this practical, train a different network architecture. Does this perform better?
+
+```{r}
+NEWnet <- nn_module(
+  "Net",
+  
+  initialize = function() {
+    self$conv1 <- nn_conv2d(1, 32, 3, 1)
+    self$conv2 <- nn_conv2d(32, 64, 3, 1)
+    self$dropout1 <- nn_dropout2d(0.25)
+    self$dropout2 <- nn_dropout2d(0.5)
+    self$fc1 <- nn_linear(774400, 128)  # Adjust the input size based on your image dimensions
+    self$fc2 <- nn_linear(128, 3)             # Change the output size to match your classification task
+    self$fc3 <- nn_linear (2, 1)
+  },
+  
+  forward = function(x) {
+    x %>%                                        # N * 1 * 224 * 224
+      self$conv1() %>%                           # N * 32 * 222 * 222
+      nnf_relu() %>% 
+      self$conv2() %>%                           # N * 64 * 220 * 220
+      nnf_relu() %>% 
+      nnf_max_pool2d(2) %>%                      # N * 64 * 110 * 110
+      self$dropout1() %>% 
+      torch_flatten(start_dim = 2) %>%           # N * 64 * 110 * 110 --> N * 774400
+      self$fc1() %>%                             # N * 128
+      nnf_relu() %>% 
+      self$dropout2() %>% 
+      self$fc2()                             # N * 2 (change the output size to match your classification task)
+  }
+)
+
+```
+
+## Train model
+
+```{r warning=FALSE}
+
+install_torch()
+
+# Set the number of epochs
+new_num_epochs <- 2
+
+train_loss <- numeric(new_num_epochs)
+train_acc <- numeric(new_num_epochs)
+test_loss <- numeric(new_num_epochs)
+test_acc <- numeric(new_num_epochs)
+
+# Loop through the epochs
+for (epoch in 1:new_num_epochs) {
+  # Perform training and validation for each epoch
+  fitted <- NEWnet %>%
+    setup(
+      loss = nn_cross_entropy_loss(),
+      optimizer = optim_adam,
+      metrics = list(
+        luz_metric_accuracy()
+      )
+    ) %>%
+    fit(train_dataloader, epochs = 1, valid_data = test_dataloader)
+  
+  # Print the metrics for the current epoch
+  cat("Epoch ", epoch, "/", new_num_epochs, "\n")
+  cat("Train metrics: Loss: ", fitted$records$metrics$train[[1]]$loss, " - Acc: ", fitted$records$metrics$train[[1]]$acc, "\n")
+  cat("Valid metrics: Loss: ", fitted$records$metrics$valid[[1]]$loss, " - Acc: ", fitted$records$metrics$valid[[1]]$acc, "\n")
+  cat("\n")
+  
+  # Store the loss and accuracy values
+  train_loss[epoch] <- fitted$records$metrics$train[[1]]$loss
+  train_acc[epoch] <- fitted$records$metrics$train[[1]]$acc
+  test_loss[epoch] <- fitted$records$metrics$train[[1]]$loss
+  test_acc[epoch] <- fitted$records$metrics$valid[[1]]$acc
+}
+
+```
 
 # Useful links
 https://medium.com/@kemalgunay/getting-started-with-image-preprocessing-in-r-52c7d153b381
