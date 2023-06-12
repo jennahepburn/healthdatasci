@@ -1,10 +1,14 @@
 ---
-title: Health Data Science Practical 2
+title: Health Data Science Practical 3
 author: Jenna Hepburn
-date: June 4, 2023
+date: June 11, 2023
 output:
   pdf_document: default
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 As we found for natural language processing, R is a little bit limited when it comes to deep neural networks. Unfortunately, these networks are the current gold-standard methods for medical image analysis. The ML/DL R packages that do exist provide interfaces (APIs) to libraries built in other languages like C/C++ and Java. This means there are a few “non-reproducible” installation and data gathering steps to run first. It also means there are a few “compromises” to get a practical that will A) be runnable B) actually complete within the allotted time and C) even vaguely works.
 Doing this on a full real dataset would likely follow a similar process (admittedly with more intensive training and more expressive architectures). Google colab running an R kernel hasn't proven a very effective alternative thus far either.
@@ -27,23 +31,23 @@ Here is an example code snippet to install the required packages:
 you can uncomment the following code to install required packages
 ```{r}
 # Install necessary packages
-install.packages("gridExtra")
-install.packages("jpeg")
-install.packages("imager")
-install.packages("magick")
+#install.packages("gridExtra")
+#install.packages("jpeg")
+#install.packages("imager")
+#install.packages("magick")
 
 # Install Bioconductor package (if not already installed)
-if (!require("BiocManager", quietly = TRUE))
-install.packages("BiocManager")
+#if (!require("BiocManager", quietly = TRUE))
+#nstall.packages("BiocManager")
 
 # Install EBImage package from Bioconductor
-BiocManager::install("EBImage")
-install.packages("abind")
+#BiocManager::install("EBImage")
+#install.packages("abind")
 
 # Install torch, torchvision, and luz
-install.packages("torch")
-install.packages("torchvision")
-install.packages("luz")
+#install.packages("torch")
+#install.packages("torchvision")
+#install.packages("luz")
 ```
 
 ```{r}
@@ -476,7 +480,6 @@ net <- nn_module(
   initialize = function() {
     self$conv1 <- nn_conv2d(1, 32, 3, 1)
     self$conv2 <- nn_conv2d(32, 64, 3, 1)
-    self$conv3 <- nn_conv2d(64, 96, 3, 1)
     self$dropout1 <- nn_dropout2d(0.25)
     self$dropout2 <- nn_dropout2d(0.5)
     self$fc1 <- nn_linear(774400, 128)  # Adjust the input size based on your image dimensions
@@ -488,9 +491,7 @@ net <- nn_module(
       self$conv1() %>%                           # N * 32 * 222 * 222
       nnf_relu() %>% 
       self$conv2() %>%                           # N * 64 * 220 * 220
-      nnf_relu() %>% 
-      self$conv3() %>%                           # N * 64 * 220 * 220
-      nnf_relu() %>% 
+      nnf_relu() %>%
       nnf_max_pool2d(2) %>%                      # N * 64 * 110 * 110
       self$dropout1() %>% 
       torch_flatten(start_dim = 2) %>%           # N * 64 * 110 * 110 --> N * 774400
