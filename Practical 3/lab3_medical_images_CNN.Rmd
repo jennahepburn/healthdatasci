@@ -92,6 +92,8 @@ As with every data analysis, the first thing we need to do is learn about our da
 
 **0_** What is pneumonia and what is the point/benefit of being able to identify it from X-rays automatically?
 
+Pneumonia is an infection of the lungs. It is beneficial to be able to identify it automatically from X-rays as it would free up radiological staff, speed up the diagnosis process to treat the patient earlier, and potentially reduce errors or missed pneumonia. 
+
 # Exploring dataset
 
 In the provided code snippet, we are exploring the dataset directory structure for a chest x-ray image classification task. 
@@ -773,6 +775,8 @@ for (epoch in 1:new_num_epochs) {
 }
 
 ```
+
+Using the materials provided, I added another linear layer onto the model. This addition did not improve the model, with a reduction of approximately 2%.
 
 # Useful links
 https://medium.com/@kemalgunay/getting-started-with-image-preprocessing-in-r-52c7d153b381
