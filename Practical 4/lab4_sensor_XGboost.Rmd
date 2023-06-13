@@ -266,7 +266,7 @@ We could potentially use hidden markov models or gaussian processes to predict e
 
 **13** Find 2 R libraries you could use to implement these approaches.
 
-
+We can use the package "HMM" to use hidden markov models and the package GauPro for gaussian processes.
 
 ### Optional 
 
