@@ -1,4 +1,10 @@
-
+---
+title: Health Data Science Practical 4
+author: Jenna Hepburn
+date: June 18, 2023
+output:
+  pdf_document: default
+---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -102,11 +108,11 @@ ggplot2::ggplot(melt, ggplot2::aes(x=ds, y=microvolts, color=Electrode)) +
 
 **2** Do you see any obvious patterns between eyes being open (dark grey blocks in the plot) and the EEG intensities?
 
-When eyes open, we see a spike in the EEG intensities, especially when the eyes first open. 
+When eyes open, we see a spike in the EEG intensities, especially when the eyes first open. It appears that microvolts are lower when eyes are closed.
 
 **3** Similarly, based on the distribution of eye open/close state over time do you anticipate any temporal correlation between these states?
 
-
+Based on this distribution, I would anticipate for there to be a temporal correlation between eyes being open and closed.
 
 Let's see if we can directly look at the distribution of EEG intensities and see how they related to eye status.
 
@@ -132,7 +138,7 @@ filt_melt_train %>% dplyr::group_by(eyeDetection, Electrode) %>%
 
 **4** Based on these analyses are any electrodes consistently more intense or varied when eyes are open?
 
-Based on these analyses, it appears that electrodes are slightly more intense when eyes are open for T8 and F8, as medians are greater when eyes are open. 
+Based on these analyses, it appears that electrodes are slightly more intense when eyes are open for T8 and F8, as medians are greater when eyes are open. Additionally, standard deviations are larger, indicating higher levels of variance, for P7 and O1.
 
 #### Time-Related Trends
 
@@ -144,11 +150,13 @@ First we will do a statistical test for stationarity:
 apply(eeg_train, 2, tseries::adf.test)
 ```
 
-
 **5** What is stationarity?
 
+Stationarity is when mean and variance to not vary over time when using time-series data. 
 
 **6** Why are we interested in stationarity? What do the results of these tests tell us? (ignoring the lack of multiple comparison correction...)
+
+We are interested in stationarity to determine if there are differences in the mean and variances of the EEGs over time, when the eyes are open and closed. The significant results tell us that we have significant evidence to support there being stationarity in our data.
 
 Then we may want to visually explore patterns of autocorrelation (previous values predicting future ones) and cross-correlation (correlation across channels over time) using `forecast::ggAcf` function.
 
@@ -157,17 +165,13 @@ The ACF plot displays the cross-correlation between each pair of electrode chann
 Positive autocorrelation indicates that the increase in voltage observed in a given time-interval leads to a proportionate increase in the lagged time interval as well.
 Negative autocorrelation indicates the opposite!
 
-
 ```{r correlation}
 forecast::ggAcf(eeg_train %>% dplyr::select(-ds))
 ```
 
-
-
-
-
 **7** Do any fields show signs of strong autocorrelation (diagonal plots)? Do any pairs of fields show signs of cross-correlation? Provide examples.
 
+We see signs of autocorrelation in F7, FC5, O1, FC6. Additionally, we see signs of cross-correlation in FC5 and F7.
 
 #### Frequency-Space 
 
@@ -183,14 +187,9 @@ eegkit::eegpsd(eeg_train %>% dplyr::filter(eyeDetection == 0) %>% dplyr::select(
 eegkit::eegpsd(eeg_train %>% dplyr::filter(eyeDetection == 1) %>% dplyr::select(-eyeDetection, -ds), Fs = Fs, xlab="Eye Closed")
 ```
 
-
-
-
-
-
 **8** Do you see any differences between the power spectral densities for the two eye states? If so, describe them.
 
-
+In the power spectral densities, we see a lot more dark blue areas (low power) in the eyes closed output. However, we do also see 3 areas of orange (high power) when eyes are closed, compared to only two lines of orange in the eyes open state. The high power areas are for different channels (electrodes) in each state.
 
 #### Independent Component Analysis
 
@@ -212,10 +211,9 @@ ggplot2::ggplot(mix_melt, ggplot2::aes(x=ds, y=M, color=`Independent Component`)
   ggplot2::scale_y_log10()
 ```
 
-
-
 **9** Does this suggest eye opening relates to an independent component of activity across the electrodes?
 
+Yes, this graph suggests that eye opening relates to an independent component of activity across the electrodes. We see a large downward spike when the eyes open. 
 
 ### Eye Opening Prediction
 
@@ -240,14 +238,21 @@ model <- xgboost(data = eeg_train_matrix,
 print(model)
 ```
 
-
-
 **10** Using the `caret` library (or any other library/model type you want such as a neural network) fit another model to predict eye opening.
 
 ```{r model2}
+train.ctl <- trainControl(
+  method = "repeatedcv",
+  number = 10,
+  repeats = 10)
 
+d.tree <- train(eyeDetection ~ .,
+                data = eeg_train,
+                method = "rpart",
+                trControl = train.ctl)
+
+print(d.tree)
 ```
-
 
 **11** Using the best performing of the two models (on the validation dataset) calculate and report the test performance (filling in the code below):
 
@@ -257,6 +262,7 @@ print(model)
 
 **12** Describe 2 possible alternative modelling approaches for prediction of eye opening from EEGs we discussed in class but haven't explored in this notebook.
 
+We could potentially use hidden markov models or gaussian processes to predict eye opening from EEGs.
 
 **13** Find 2 R libraries you could use to implement these approaches.
 
@@ -265,3 +271,5 @@ print(model)
 ### Optional 
 
 **14** (Optional) As this is the last practical of the course - let me know how you would change future offerings of this course.  What worked and didn't work for you (e.g., in terms of the practicals, tutorials, and lectures)? What would you add or remove from the course? What was the main thing you will take away from this course? This will not impact your marks!
+
+I loved this course! I am taking away a much broader understanding of data science, new tools for analyses, and new perspectives about research in other disciplines. I really liked the guest speakers, and found the practicals pushed me just enough. Practical 3 was really the only thing that didn't work for me. I do wish there was maybe 1 less group project, although I do like the interdisciplinary focus, and know that is also product of the large class size this year. Thanks for a great spring, this is one of my favourite courses that I have taken so far!
